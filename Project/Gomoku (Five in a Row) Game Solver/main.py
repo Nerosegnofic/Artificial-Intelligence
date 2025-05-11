@@ -278,5 +278,24 @@ def play_with_AI():
 
     print("Thanks for playing!")
 
+def main():
+    print("\n===== Welcome to Gomoku Game =====")
+    print("1. Human vs Human")
+    print("2. Human vs AI")
+    
+    while True:
+        try:
+            choice = int(input("\nSelect game mode (1-2): "))
+            if choice == 1:
+                play_gomoku()
+                break
+            elif choice == 2:
+                play_with_AI()
+                break
+            else:
+                print("Invalid choice. Please enter 1 or 2.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
 if __name__ == "__main__":
-    play_with_AI()
+    main()
