@@ -1,4 +1,4 @@
-import copy
+import random
 
 BASE = 9973
 MOD = 10 ** 9 + 7
@@ -216,6 +216,10 @@ def alpha_beta(board, depth, alpha, beta, maximizing, player, opponent):
 def get_ai_move(board, ai_player, user_player, ai_type="minimax"):
     best_score = float('-inf')
     best_move = None
+
+    if all(cell == '.' for row in board for cell in row):
+        return random.randint(0, len(board) - 1), random.randint(0, len(board) - 1)
+
     for move in get_valid_moves(board):
         if not has_neighbor(board, move, user_player) and not has_four_aligned(board, move[0], move[1], ai_player) and (
                 move[0] > 0 or move[1] > 0):
