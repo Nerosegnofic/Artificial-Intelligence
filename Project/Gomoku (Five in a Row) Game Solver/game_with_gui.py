@@ -500,7 +500,7 @@ class GomokuGUI:
         best_move = None
 
         if all(cell == '.' for row in board for cell in row):
-            return (len(board) // 2, len(board) // 2)
+            return (random.randint(0, self.size), random.randint(0, self.size))
 
         for move in self.get_valid_moves(board):
             if not self.has_neighbor(board, move, user_player) and not self.has_four_aligned(board, move[0], move[1],
