@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
-import copy
+import random
 
 BASE = 9973
 MOD = 10 ** 9 + 7
@@ -307,13 +307,12 @@ class GomokuGUI:
             if '.' in row:
                 return False
         return True
-    
+
     def is_valid_move(self, row, col):
         return 0 <= row < self.size and 0 <= col < self.size and self.board[row][col] == '.'
-    
 
     ############## ABOVE IS GUI ############# DOWN IS THE GAME #############
-    
+
     def check_win(self, board, row, col, player):
         directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
 
@@ -436,7 +435,8 @@ class GomokuGUI:
         if maximizing:
             maxEval = float('-inf')
             for move in self.get_valid_moves(board):
-                if not self.has_neighbor(board, move, opponent) and not self.has_four_aligned(board, move[0], move[1], player):
+                if not self.has_neighbor(board, move, opponent) and not self.has_four_aligned(board, move[0], move[1],
+                                                                                              player):
                     continue
                 board[move[0]][move[1]] = player
                 eval = self.minimax(board, depth - 1, False, player, opponent)
@@ -447,7 +447,8 @@ class GomokuGUI:
         else:
             minEval = float('inf')
             for move in self.get_valid_moves(board):
-                if not self.has_neighbor(board, move, player) and not self.has_four_aligned(board, move[0], move[1], opponent):
+                if not self.has_neighbor(board, move, player) and not self.has_four_aligned(board, move[0], move[1],
+                                                                                            opponent):
                     continue
                 board[move[0]][move[1]] = opponent
                 eval = self.minimax(board, depth - 1, True, player, opponent)
@@ -469,7 +470,8 @@ class GomokuGUI:
         if maximizing:
             maxEval = float('-inf')
             for move in self.get_valid_moves(board):
-                if not self.has_neighbor(board, move, opponent) and not self.has_four_aligned(board, move[0], move[1], player):
+                if not self.has_neighbor(board, move, opponent) and not self.has_four_aligned(board, move[0], move[1],
+                                                                                              player):
                     continue
                 board[move[0]][move[1]] = player
                 eval = self.alpha_beta(board, depth - 1, alpha, beta, False, player, opponent)
@@ -483,7 +485,8 @@ class GomokuGUI:
         else:
             minEval = float('inf')
             for move in self.get_valid_moves(board):
-                if not self.has_neighbor(board, move, player) and not self.has_four_aligned(board, move[0], move[1], opponent):
+                if not self.has_neighbor(board, move, player) and not self.has_four_aligned(board, move[0], move[1],
+                                                                                            opponent):
                     continue
                 board[move[0]][move[1]] = opponent
                 eval = self.alpha_beta(board, depth - 1, alpha, beta, True, player, opponent)
