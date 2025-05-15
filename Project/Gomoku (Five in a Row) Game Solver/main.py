@@ -1,4 +1,3 @@
-import copy
 import random
 
 BASE = 9973
@@ -24,24 +23,31 @@ def is_valid_move(board, row, col):
 
 
 def check_win(board, row, col, player):
-    directions = [(0, 1), (1, 0), (1, 1), (1, -1), (-1, 1), (0, -1), (-1, 0), (-1, -1)]
+    directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+    size = len(board)
+
     for dx, dy in directions:
         count = 1
-        for i in range(1, 6):
-            x, y = row + dx * i, col + dy * i
-            if 0 <= x < len(board) and 0 <= y < len(board[0]) and board[x][y] == player:
+
+        for i in range(1, 5):
+            r, c = row + dx * i, col + dy * i
+            if 0 <= r < size and 0 <= c < size and board[r][c] == player:
                 count += 1
             else:
                 break
-        for i in range(1, 6):
-            x, y = row - dx * i, col - dy * i
-            if 0 <= x < len(board) and 0 <= y < len(board[0]) and board[x][y] == player:
+
+        for i in range(1, 5):
+            r, c = row - dx * i, col - dy * i
+            if 0 <= r < size and 0 <= c < size and board[r][c] == player:
                 count += 1
             else:
                 break
+
         if count >= 5:
             return True
+
     return False
+
 
 
 def get_valid_moves(board):
@@ -69,147 +75,68 @@ def flatten_board_rolling_hash(board):
 
 def evaluate(board, player):
     opponent = 'O' if player == 'X' else 'X'
+    directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+    size = len(board)
     score = 0
-    pattern_weights = {
-        'win5': 10_000_000,
-        'double_open4': 8_000_000,
-        'open4': 5_000_000,
-        'halfopen4': 3_000_000,
-        'double_open3': 2_000_000,
-        'open3': 1_000_000,
-        'halfopen3': 500_000,
-        'open2': 200_000
-    }
 
-    def check_line(x, y, dx, dy, player):
-        consecutive = 0
-        opens = 0
-        streaks = []
-        for i in range(-5, 6):
-            nx, ny = x + dx*i, y + dy*i
-            if 0 <= nx < len(board) and 0 <= ny < len(board[0]):
-                if board[nx][ny] == player:
-                    consecutive += 1
-                    if consecutive >= 5:
-                        return pattern_weights['win5']
-                else:
-                    if consecutive > 0:
-                        left_open = 0 <= (x + dx*(i-consecutive-1)) < len(board) and 0 <= (y + dy*(i-consecutive-1)) < len(board[0]) and board[x + dx*(i-consecutive-1)][y + dy*(i-consecutive-1)] == '.'
-                        right_open = 0 <= nx < len(board) and 0 <= ny < len(board[0]) and board[nx][ny] == '.'
-                        streaks.append((consecutive, left_open, right_open))
-                    consecutive = 0
-        max_score = 0
-        for streak, left, right in streaks:
-            opens = left + right
-            if streak >= 5:
-                return pattern_weights['win5']
-            elif streak == 4:
-                if opens == 2:
-                    max_score = max(max_score, pattern_weights['open4'])
-                elif opens == 1:
-                    max_score = max(max_score, pattern_weights['halfopen4'])
-            elif streak == 3:
-                if opens == 2:
-                    max_score = max(max_score, pattern_weights['open3'] * 2)
-                elif opens == 1:
-                    max_score = max(max_score, pattern_weights['halfopen3'])
-            elif streak == 2:
-                if opens >= 2:
-                    max_score = max(max_score, pattern_weights['open2'])
-        return max_score
+    def score_segment(segment):
+        player_count = segment.count(player)
+        opponent_count = segment.count(opponent)
+        empty_count = segment.count('.')
 
-    for x in range(len(board)):
-        for y in range(len(board[0])):
-            if board[x][y] == player:
-                for dx, dy in [(0,1),(1,0),(1,1),(1,-1)]:
-                    score += check_line(x, y, dx, dy, player)
-            elif board[x][y] == opponent:
-                for dx, dy in [(0,1),(1,0),(1,1),(1,-1)]:
-                    score -= check_line(x, y, dx, dy, opponent)
+        if player_count == 5:
+            return 1_000_000
+        if opponent_count == 5:
+            return -1_000_000
+        if player_count == 4 and empty_count == 1:
+            return 100_000
+        if opponent_count == 4 and empty_count == 1:
+            return -100_000
+        if player_count == 3 and empty_count == 2:
+            return 10_000
+        if opponent_count == 3 and empty_count == 2:
+            return -10_000
+        if player_count == 2 and empty_count == 3:
+            return 1_000
+        if opponent_count == 2 and empty_count == 3:
+            return -1_000
+        if player_count == 1 and empty_count == 4:
+            return 100
+        if opponent_count == 1 and empty_count == 4:
+            return -100
+        return 0
 
-    for x in range(len(board)):
-        for y in range(len(board[0])):
-            if board[x][y] == '.':
-                player_potential = 0
-                opponent_potential = 0
-                for dx, dy in [(0,1),(1,0),(1,1),(1,-1)]:
-                    for p, mult in [(player, 1), (opponent, -1)]:
-                        consecutive = 0
-                        opens = 0
-                        for dir in [1, -1]:
-                            for i in range(1, 6):
-                                nx, ny = x + dx*i*dir, y + dy*i*dir
-                                if 0 <= nx < len(board) and 0 <= ny < len(board[0]):
-                                    if board[nx][ny] == p:
-                                        consecutive += 1
-                                    elif board[nx][ny] == '.':
-                                        opens += 1
-                                        break
-                                    else:
-                                        break
-                        if consecutive >= 4:
-                            score += mult * pattern_weights['open4'] * opens
-                        elif consecutive == 3:
-                            score += mult * pattern_weights['open3'] * opens
-                        elif consecutive == 2:
-                            score += mult * pattern_weights['open2'] * opens
+    for x in range(size):
+        for y in range(size):
+            for dx, dy in directions:
+                segment = []
+                for i in range(5):
+                    nx, ny = x + dx * i, y + dy * i
+                    if 0 <= nx < size and 0 <= ny < size:
+                        segment.append(board[nx][ny])
+                    else:
+                        segment.append(None)
+                if None not in segment:
+                    score += score_segment(segment)
+
     return score
 
 
-def get_ai_move(board, ai_player, user_player, ai_type="minimax"):
-    is_empty = all(cell == '.' for row in board for cell in row)
-    if is_empty:
-        return random.choice(get_valid_moves(board))
-
-    for x in range(len(board)):
-        for y in range(len(board[0])):
-            if board[x][y] == '.':
-                board[x][y] = ai_player
-                if check_win(board, x, y, ai_player):
-                    board[x][y] = '.'
-                    return (x, y)
-                board[x][y] = '.'
-
-    critical_moves = []
-    for x in range(len(board)):
-        for y in range(len(board[0])):
-            if board[x][y] == '.':
-                board[x][y] = user_player
-                if check_win(board, x, y, user_player):
-                    critical_moves.append((x, y))
-                board[x][y] = '.'
-    if critical_moves:
-        return random.choice(critical_moves)
-
-    threat_moves = []
-    for x in range(len(board)):
-        for y in range(len(board[0])):
-            if board[x][y] == '.':
-                board[x][y] = user_player
-                if evaluate(board, user_player) >= 2_500_000:
-                    threat_moves.append((x, y))
-                board[x][y] = '.'
-    if threat_moves:
-        return random.choice(threat_moves)
-
-    best_score = -float('inf')
-    best_moves = []
-    for move in get_valid_moves(board):
-        if not has_neighbor(board, move, user_player):
-            continue
-        board[move[0]][move[1]] = ai_player
-        if ai_type == "minimax":
-            score = minimax(board, 2, False, ai_player, user_player)
-        else:
-            score = alpha_beta(board, 2, float('-inf'), float('inf'), False, ai_player, user_player)
-        board[move[0]][move[1]] = '.'
-        if score > best_score:
-            best_score = score
-            best_moves = [move]
-        elif score == best_score:
-            best_moves.append(move)
-
-    return random.choice(best_moves) if best_moves else None
+def has_four_aligned(board, row, col, player):
+    directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+    for dx, dy in directions:
+        count = 1
+        for sign in [-1, 1]:
+            for i in range(1, 5):
+                r = row + sign * dx * i
+                c = col + sign * dy * i
+                if 0 <= r < len(board) and 0 <= c < len(board) and board[r][c] == player:
+                    count += 1
+                else:
+                    break
+        if count >= 4:
+            return True
+    return False
 
 
 def minimax(board, depth, maximizing, player, opponent):
@@ -218,14 +145,14 @@ def minimax(board, depth, maximizing, player, opponent):
         return memo[key]
 
     score = evaluate(board, player)
-    if depth == 0 or abs(score) >= 10_000_000 or not get_valid_moves(board):
+    if depth == 0 or abs(score) >= 100000 or not get_valid_moves(board):
         memo[key] = score
         return score
 
     if maximizing:
         maxEval = float('-inf')
         for move in get_valid_moves(board):
-            if not has_neighbor(board, move, opponent):
+            if not has_neighbor(board, move, opponent) and not has_four_aligned(board, move[0], move[1], player):
                 continue
             board[move[0]][move[1]] = player
             eval = minimax(board, depth - 1, False, player, opponent)
@@ -236,7 +163,7 @@ def minimax(board, depth, maximizing, player, opponent):
     else:
         minEval = float('inf')
         for move in get_valid_moves(board):
-            if not has_neighbor(board, move, player):
+            if not has_neighbor(board, move, player) and not has_four_aligned(board, move[0], move[1], opponent):
                 continue
             board[move[0]][move[1]] = opponent
             eval = minimax(board, depth - 1, True, player, opponent)
@@ -252,14 +179,14 @@ def alpha_beta(board, depth, alpha, beta, maximizing, player, opponent):
         return memo[key]
 
     score = evaluate(board, player)
-    if depth == 0 or abs(score) >= 10_000_000 or not get_valid_moves(board):
+    if depth == 0 or abs(score) >= 100000 or not get_valid_moves(board):
         memo[key] = score
         return score
 
     if maximizing:
         maxEval = float('-inf')
         for move in get_valid_moves(board):
-            if not has_neighbor(board, move, opponent):
+            if not has_neighbor(board, move, opponent) and not has_four_aligned(board, move[0], move[1], player):
                 continue
             board[move[0]][move[1]] = player
             eval = alpha_beta(board, depth - 1, alpha, beta, False, player, opponent)
@@ -273,7 +200,7 @@ def alpha_beta(board, depth, alpha, beta, maximizing, player, opponent):
     else:
         minEval = float('inf')
         for move in get_valid_moves(board):
-            if not has_neighbor(board, move, player):
+            if not has_neighbor(board, move, player) and not has_four_aligned(board, move[0], move[1], opponent):
                 continue
             board[move[0]][move[1]] = opponent
             eval = alpha_beta(board, depth - 1, alpha, beta, True, player, opponent)
@@ -284,6 +211,29 @@ def alpha_beta(board, depth, alpha, beta, maximizing, player, opponent):
                 break
         memo[key] = minEval if minEval != float('inf') else score
         return memo[key]
+
+
+def get_ai_move(board, ai_player, user_player, ai_type="minimax"):
+    best_score = float('-inf')
+    best_move = None
+
+    if all(cell == '.' for row in board for cell in row):
+        return random.randint(0, len(board) - 1), random.randint(0, len(board) - 1)
+
+    for move in get_valid_moves(board):
+        if not has_neighbor(board, move, user_player) and not has_four_aligned(board, move[0], move[1], ai_player) and (
+                move[0] > 0 or move[1] > 0):
+            continue
+        board[move[0]][move[1]] = ai_player
+        if ai_type == "minimax":
+            score = minimax(board, 3, False, ai_player, user_player)
+        else:
+            score = alpha_beta(board, 3, float('-inf'), float('inf'), False, ai_player, user_player)
+        board[move[0]][move[1]] = '.'
+        if score > best_score:
+            best_score = score
+            best_move = move
+    return best_move
 
 
 def play_gomoku():
@@ -438,7 +388,6 @@ def main():
             break
         else:
             print("Invalid choice.")
-
 
 if __name__ == "__main__":
     main()
