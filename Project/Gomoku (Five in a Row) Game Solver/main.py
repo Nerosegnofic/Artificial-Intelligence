@@ -72,46 +72,87 @@ def evaluate(board, player):
     score = 0
     pattern_weights = {
         'win5': 10_000_000,
+        'double_open4': 8_000_000,
         'open4': 5_000_000,
-        'halfopen4': 2_500_000,
-        'double_open3': 1_500_000,
-        'open3': 500_000,
-        'halfopen3': 250_000,
-        'open2': 100_000
+        'halfopen4': 3_000_000,
+        'double_open3': 2_000_000,
+        'open3': 1_000_000,
+        'halfopen3': 500_000,
+        'open2': 200_000
     }
+
+    def check_line(x, y, dx, dy, player):
+        consecutive = 0
+        opens = 0
+        streaks = []
+        for i in range(-5, 6):
+            nx, ny = x + dx*i, y + dy*i
+            if 0 <= nx < len(board) and 0 <= ny < len(board[0]):
+                if board[nx][ny] == player:
+                    consecutive += 1
+                    if consecutive >= 5:
+                        return pattern_weights['win5']
+                else:
+                    if consecutive > 0:
+                        left_open = 0 <= (x + dx*(i-consecutive-1)) < len(board) and 0 <= (y + dy*(i-consecutive-1)) < len(board[0]) and board[x + dx*(i-consecutive-1)][y + dy*(i-consecutive-1)] == '.'
+                        right_open = 0 <= nx < len(board) and 0 <= ny < len(board[0]) and board[nx][ny] == '.'
+                        streaks.append((consecutive, left_open, right_open))
+                    consecutive = 0
+        max_score = 0
+        for streak, left, right in streaks:
+            opens = left + right
+            if streak >= 5:
+                return pattern_weights['win5']
+            elif streak == 4:
+                if opens == 2:
+                    max_score = max(max_score, pattern_weights['open4'])
+                elif opens == 1:
+                    max_score = max(max_score, pattern_weights['halfopen4'])
+            elif streak == 3:
+                if opens == 2:
+                    max_score = max(max_score, pattern_weights['open3'] * 2)
+                elif opens == 1:
+                    max_score = max(max_score, pattern_weights['halfopen3'])
+            elif streak == 2:
+                if opens >= 2:
+                    max_score = max(max_score, pattern_weights['open2'])
+        return max_score
+
+    for x in range(len(board)):
+        for y in range(len(board[0])):
+            if board[x][y] == player:
+                for dx, dy in [(0,1),(1,0),(1,1),(1,-1)]:
+                    score += check_line(x, y, dx, dy, player)
+            elif board[x][y] == opponent:
+                for dx, dy in [(0,1),(1,0),(1,1),(1,-1)]:
+                    score -= check_line(x, y, dx, dy, opponent)
 
     for x in range(len(board)):
         for y in range(len(board[0])):
             if board[x][y] == '.':
-                for p in [player, opponent]:
-                    for dx, dy in [(0, 1), (1, 0), (1, 1), (1, -1)]:
-                        threats = []
-                        for dir in [-1, 1]:
-                            consecutive = 0
-                            open_ends = 0
+                player_potential = 0
+                opponent_potential = 0
+                for dx, dy in [(0,1),(1,0),(1,1),(1,-1)]:
+                    for p, mult in [(player, 1), (opponent, -1)]:
+                        consecutive = 0
+                        opens = 0
+                        for dir in [1, -1]:
                             for i in range(1, 6):
-                                nx, ny = x + dx * i * dir, y + dy * i * dir
+                                nx, ny = x + dx*i*dir, y + dy*i*dir
                                 if 0 <= nx < len(board) and 0 <= ny < len(board[0]):
                                     if board[nx][ny] == p:
                                         consecutive += 1
                                     elif board[nx][ny] == '.':
-                                        open_ends += 1
+                                        opens += 1
                                         break
                                     else:
                                         break
-                            if open_ends > 0:
-                                threats.append((consecutive, open_ends))
-
-                        max_streak = max([t[0] for t in threats], default=0)
-                        total_open = sum([t[1] for t in threats])
-
-                        if max_streak >= 4:
-                            score += pattern_weights['open4'] * (1 if p == player else -1) * (total_open ** 2)
-                        elif max_streak == 3:
-                            score += pattern_weights['open3'] * (1 if p == player else -1) * total_open
-                        elif max_streak == 2 and total_open >= 2:
-                            score += pattern_weights['open2'] * (1 if p == player else -1)
-
+                        if consecutive >= 4:
+                            score += mult * pattern_weights['open4'] * opens
+                        elif consecutive == 3:
+                            score += mult * pattern_weights['open3'] * opens
+                        elif consecutive == 2:
+                            score += mult * pattern_weights['open2'] * opens
     return score
 
 
@@ -177,7 +218,7 @@ def minimax(board, depth, maximizing, player, opponent):
         return memo[key]
 
     score = evaluate(board, player)
-    if depth == 0 or abs(score) >= 5_000_000 or not get_valid_moves(board):
+    if depth == 0 or abs(score) >= 10_000_000 or not get_valid_moves(board):
         memo[key] = score
         return score
 
@@ -211,7 +252,7 @@ def alpha_beta(board, depth, alpha, beta, maximizing, player, opponent):
         return memo[key]
 
     score = evaluate(board, player)
-    if depth == 0 or abs(score) >= 5_000_000 or not get_valid_moves(board):
+    if depth == 0 or abs(score) >= 10_000_000 or not get_valid_moves(board):
         memo[key] = score
         return score
 
